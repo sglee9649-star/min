@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import PassGate from "@/components/PassGate";
-import { CRITERIA_CATALOG, GROUP_LABELS, TASK_TYPE_LABELS, criteriaForTask, type TaskType } from "@/lib/criteria";
+import { CRITERIA_CATALOG, GROUP_LABELS, TASK_TYPE_LABELS, taskTypeLabel, criteriaForTask, type TaskType } from "@/lib/criteria";
 import {
   defaultRubrics, loadConfig, saveConfig, rubricWeightSum,
   type JudgingConfig, type RubricItem,
@@ -134,13 +134,13 @@ function JudgingInner() {
   return (
     <main className="page">
       <div className="topbar">
-        <Link href="/admin" className="home-link">← 관리자 홈</Link>
+        <Link href="/admin" className="home-link">← 관리자 홈 (Admin)</Link>
       </div>
-      <h1 className="contest-title">심사 설정</h1>
+      <h1 className="contest-title">심사 설정 (Judging Setup)</h1>
 
       {/* ---------- 평가기준표 빌더 ---------- */}
       <div className="card" style={{ width: "100%", maxWidth: 860 }}>
-        <h2>평가기준표 (루브릭)</h2>
+        <h2>평가기준표 (Rubric)</h2>
         <p style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 6, lineHeight: 1.7 }}>
           과제 유형별로 평가항목을 선택하고 비중을 정합니다. 합이 100%가 되어야 합니다.
           <br />🤖 표시는 AI도 채점하는 항목, 👂 표시는 심사위원만 채점하는 항목(소리 기반)입니다.
@@ -148,7 +148,7 @@ function JudgingInner() {
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
           {(Object.keys(TASK_TYPE_LABELS) as TaskType[]).map((t) => (
             <button key={t} type="button" className={taskTab === t ? "btn" : "btn ghost"} onClick={() => setTaskTab(t)}>
-              {TASK_TYPE_LABELS[t]}
+              {taskTypeLabel(t)}
             </button>
           ))}
         </div>
@@ -165,7 +165,7 @@ function JudgingInner() {
                     <label style={{ display: "flex", alignItems: "center", gap: 8, flex: "1 1 300px", cursor: "pointer" }}>
                       <input type="checkbox" checked={!!item} onChange={() => toggleItem(c.id)} style={{ width: "auto" }} />
                       <span style={{ fontSize: 14 }}>
-                        {c.aiEvaluable ? "🤖" : "👂"} <strong>{c.name}</strong>
+                        {c.aiEvaluable ? "🤖" : "👂"} <strong>{c.name} ({c.nameEn})</strong>
                         <span style={{ color: "var(--text-dim)", fontSize: 12 }}> — {c.description}</span>
                       </span>
                     </label>
@@ -179,7 +179,7 @@ function JudgingInner() {
                           onChange={(e) => setWeight(c.id, Number(e.target.value))}
                           style={{
                             width: 70, padding: "6px 8px", borderRadius: 8, fontSize: 14, textAlign: "right",
-                            border: "1px solid var(--border)", background: "rgba(8,14,28,0.8)", color: "var(--text)",
+                            border: "1px solid var(--border)", background: "var(--input-bg)", color: "var(--text)",
                           }}
                         />
                         <span style={{ fontSize: 13, color: "var(--text-dim)" }}>%</span>
@@ -203,7 +203,7 @@ function JudgingInner() {
 
       {/* ---------- AI 반영 비율 ---------- */}
       <div className="card" style={{ width: "100%", maxWidth: 860 }}>
-        <h2>AI 점수 반영 비율</h2>
+        <h2>AI 점수 반영 비율 (AI Score Weight)</h2>
         <p style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 6, lineHeight: 1.7 }}>
           최종 집계(6단계)에서 AI 점수를 몇 % 반영할지 정합니다. 나머지는 심사위원 점수입니다.
           AI 점수는 참고용이므로 50%를 넘지 않는 것을 권장합니다.
@@ -226,7 +226,7 @@ function JudgingInner() {
 
       {/* ---------- 심사위원 ---------- */}
       <div className="card" style={{ width: "100%", maxWidth: 860 }}>
-        <h2>심사위원 ({config.judges.length}명)</h2>
+        <h2>심사위원 (Judges · {config.judges.length}명)</h2>
         {config.judges.map((j) => (
           <div key={j.id} style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
             <span style={{ fontSize: 15 }}>👤 {j.name}</span>
@@ -255,7 +255,7 @@ function JudgingInner() {
             placeholder="심사위원 이름 (예: 김민수)"
             style={{
               flex: 1, maxWidth: 260, padding: "10px 14px", borderRadius: 10, fontSize: 15,
-              border: "1px solid var(--border)", background: "rgba(8,14,28,0.8)", color: "var(--text)",
+              border: "1px solid var(--border)", background: "var(--input-bg)", color: "var(--text)",
             }}
           />
           <button className="btn ghost" type="submit">+ 추가</button>
@@ -264,7 +264,7 @@ function JudgingInner() {
 
       {/* ---------- 참가자 ---------- */}
       <div className="card" style={{ width: "100%", maxWidth: 860 }}>
-        <h2>참가자 명단 (참가번호)</h2>
+        <h2>참가자 명단 (Participants · 참가번호)</h2>
         <p style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 6 }}>
           심사위원 화면에는 이름 없이 참가번호만 표시됩니다 (익명 심사).
         </p>
@@ -275,7 +275,7 @@ function JudgingInner() {
             placeholder="예: 1, 2, 3, 4, 5"
             style={{
               flex: 1, minWidth: 220, padding: "10px 14px", borderRadius: 10, fontSize: 15,
-              border: "1px solid var(--border)", background: "rgba(8,14,28,0.8)", color: "var(--text)",
+              border: "1px solid var(--border)", background: "var(--input-bg)", color: "var(--text)",
             }}
           />
           <button className="btn ghost" onClick={loadAssignedParticipants}>배정된 번호 불러오기</button>

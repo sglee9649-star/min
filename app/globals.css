@@ -1,5 +1,6 @@
 :root {
   --bg: #060a14;
+  --bg-glow: #0d1830;
   --bg-card: rgba(20, 30, 55, 0.55);
   --border: rgba(80, 160, 255, 0.25);
   --cyan: #4dd8ff;
@@ -7,16 +8,59 @@
   --text: #dce8f5;
   --text-dim: #7d93ad;
   --danger: #ff6b6b;
+  --grid-line: rgba(77, 216, 255, 0.04);
+  --input-bg: rgba(8, 14, 28, 0.8);
+  --title-grad: linear-gradient(90deg, #9fd9ff, #4dd8ff, #9fd9ff);
+}
+
+/* 화이트(라이트) 모드 */
+[data-theme="light"] {
+  --bg: #eef3f9;
+  --bg-glow: #dce9f7;
+  --bg-card: rgba(255, 255, 255, 0.8);
+  --border: rgba(20, 90, 140, 0.28);
+  --cyan: #0b7fb5;
+  --cyan-dim: #3d94bd;
+  --text: #14273a;
+  --text-dim: #55708a;
+  --danger: #c93a3a;
+  --grid-line: rgba(11, 127, 181, 0.06);
+  --input-bg: rgba(255, 255, 255, 0.92);
+  --title-grad: linear-gradient(90deg, #0b6fa3, #0b95c9, #0b6fa3);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  background: radial-gradient(1200px 700px at 50% -10%, #0d1830 0%, var(--bg) 60%);
+  background: radial-gradient(1200px 700px at 50% -10%, var(--bg-glow) 0%, var(--bg) 60%);
   color: var(--text);
   font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   min-height: 100vh;
 }
+
+/* 버튼·입력요소가 글자색/글꼴을 상속받도록 (기본값이 검정이라 다크 배경에서 안 보이는 버그 방지) */
+button, input, select, textarea {
+  color: inherit;
+  font-family: inherit;
+}
+
+/* 테마 전환 버튼 (우상단 고정) */
+.theme-toggle {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 50;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  font-size: 18px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s, transform 0.2s;
+}
+.theme-toggle:hover { border-color: var(--cyan); transform: scale(1.06); }
 
 /* 미래지향 배경: 은은한 그리드 + 상단 광원 */
 body::before {
@@ -25,8 +69,8 @@ body::before {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(77, 216, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(77, 216, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 44px 44px;
   mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 30%, transparent 75%);
   -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 30%, transparent 75%);
@@ -51,7 +95,7 @@ a { color: inherit; text-decoration: none; }
   font-weight: 700;
   letter-spacing: 0.04em;
   text-align: center;
-  background: linear-gradient(90deg, #9fd9ff, #4dd8ff, #9fd9ff);
+  background: var(--title-grad);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -106,7 +150,7 @@ a.card:hover {
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: rgba(8, 14, 28, 0.8);
+  background: var(--input-bg);
   color: var(--text);
   font-size: 16px;
   outline: none;
@@ -117,7 +161,7 @@ a.card:hover {
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: rgba(8, 14, 28, 0.8);
+  background: var(--input-bg);
   color: var(--text);
   font-size: 16px;
   outline: none;
@@ -295,7 +339,7 @@ a.card:hover {
   padding: 16px 20px;
   border-radius: 999px;
   border: 1px solid var(--cyan-dim);
-  background: rgba(6, 12, 24, 0.85);
+  background: var(--input-bg);
   color: var(--cyan);
   outline: none;
   box-shadow: 0 0 24px rgba(77, 216, 255, 0.15), inset 0 0 20px rgba(77, 216, 255, 0.05);
@@ -353,3 +397,30 @@ a.card:hover {
   padding: 40px;
 }
 .display-page .contest-title { font-size: clamp(36px, 7vw, 84px); }
+
+/* 결과 발표 순위 */
+.podium {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.podium-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 24px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  font-size: clamp(18px, 3vw, 26px);
+}
+.podium-row.top {
+  border-color: var(--cyan);
+  box-shadow: 0 0 30px rgba(77, 216, 255, 0.18);
+  background: linear-gradient(135deg, rgba(77, 216, 255, 0.14), var(--bg-card));
+}
+.podium-rank { font-size: clamp(24px, 4vw, 38px); min-width: 54px; text-align: center; font-weight: 700; }
+.podium-num { flex: 1; font-weight: 600; }
+.podium-score { color: var(--cyan); font-weight: 700; font-variant-numeric: tabular-nums; }

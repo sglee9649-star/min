@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import PassGate from "@/components/PassGate";
-import { CRITERIA_CATALOG, TASK_TYPE_LABELS, type TaskType } from "@/lib/criteria";
+import { CRITERIA_CATALOG, TASK_TYPE_LABELS, taskTypeLabel, type TaskType } from "@/lib/criteria";
 import {
   hasConfig, loadConfig, saveConfig, loadScores, upsertScores,
   type JudgingConfig, type JudgeScore,
@@ -59,18 +59,18 @@ function JudgeInner() {
   if (configLoaded && !config) {
     return (
       <main className="page" style={{ justifyContent: "center", minHeight: "80vh" }}>
-        <h1 className="contest-title">심사위원 모드</h1>
+        <h1 className="contest-title">심사위원 모드 (Judge Mode)</h1>
         <div className="card" style={{ maxWidth: 520, textAlign: "center" }}>
           <p style={{ lineHeight: 1.9 }}>
             아직 심사 설정이 없습니다.
             <br />관리자에게 <strong style={{ color: "var(--cyan)" }}>심사 설정 링크(QR)</strong>를 받아
             이 기기에서 한 번 열어주세요.
           </p>
-          <p style={{ marginTop: 10, fontSize: 13, color: "var(--text-dim)" }}>
-            (관리자 → 심사 설정 → &quot;심사 설정 링크 만들기&quot;)
+          <p style={{ marginTop: 8, fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7 }}>
+            No judging setup yet. Please open the setup link (QR) from your administrator once on this device.
           </p>
         </div>
-        <Link href="/" className="home-link">← 처음으로</Link>
+        <Link href="/" className="home-link">← 처음으로 (Home)</Link>
       </main>
     );
   }
@@ -82,8 +82,8 @@ function JudgeInner() {
   if (!judge) {
     return (
       <main className="page" style={{ justifyContent: "center", minHeight: "80vh" }}>
-        <h1 className="contest-title">심사위원 모드</h1>
-        <p className="subtitle">본인 이름을 선택하세요</p>
+        <h1 className="contest-title">심사위원 모드 (Judge Mode)</h1>
+        <p className="subtitle">본인 이름을 선택하세요 (Select your name)</p>
         <div className="role-grid" style={{ maxWidth: 560 }}>
           {config.judges.map((j) => (
             <button
@@ -130,21 +130,21 @@ function JudgeInner() {
       <main className="page">
         <div className="topbar">
           <button className="btn ghost" style={{ padding: "6px 12px", fontSize: 13 }} onClick={() => setCurrent(null)}>
-            ← 참가자 목록
+            ← 참가자 목록 (List)
           </button>
-          <span style={{ fontSize: 13, color: "var(--text-dim)" }}>심사위원: {judge.name}</span>
+          <span style={{ fontSize: 13, color: "var(--text-dim)" }}>심사위원 (Judge): {judge.name}</span>
         </div>
-        <h1 className="contest-title">참가번호 {current}번</h1>
+        <h1 className="contest-title">참가번호 {current}번 (No. {current})</h1>
         <p className="subtitle">
-          {TASK_TYPE_LABELS[taskType]}
-          {!config.participantTaskTypes[current] && " (유형을 확인해주세요)"}
+          {taskTypeLabel(taskType)}
+          {!config.participantTaskTypes[current] && " · 유형을 확인해주세요 (Confirm task type)"}
         </p>
         {!config.participantTaskTypes[current] && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {(Object.keys(TASK_TYPE_LABELS) as TaskType[]).map((t) => (
               <button key={t} className={taskType === t ? "btn" : "btn ghost"} style={{ padding: "6px 14px", fontSize: 13 }}
                 onClick={() => { setTaskType(t); setDraft({}); }}>
-                {TASK_TYPE_LABELS[t]}
+                {taskTypeLabel(t)}
               </button>
             ))}
           </div>
@@ -154,10 +154,11 @@ function JudgeInner() {
           {items.map(({ item, criterion }) => (
             <div key={item.criterionId} style={{ marginBottom: 20 }}>
               <p style={{ fontSize: 15 }}>
-                <strong>{criterion!.name}</strong>
+                <strong>{criterion!.name} ({criterion!.nameEn})</strong>
                 <span className="badge">{item.weight}%</span>
               </p>
               <p style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 3 }}>{criterion!.description}</p>
+              <p style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2, fontStyle: "italic" }}>{criterion!.descriptionEn}</p>
               <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                 {[0, 1, 2, 3, 4, 5].map((n) => (
                   <button
@@ -175,14 +176,14 @@ function JudgeInner() {
           ))}
 
           <label style={{ fontSize: 13, color: "var(--text-dim)" }}>
-            코멘트 (선택)
+            코멘트 (Comment, 선택 / optional)
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={2}
               style={{
                 width: "100%", marginTop: 6, padding: "10px 12px", borderRadius: 10, fontSize: 14,
-                border: "1px solid var(--border)", background: "rgba(8,14,28,0.8)", color: "var(--text)",
+                border: "1px solid var(--border)", background: "var(--input-bg)", color: "var(--text)",
                 resize: "vertical", fontFamily: "inherit",
               }}
             />
@@ -194,7 +195,7 @@ function JudgeInner() {
             disabled={!allScored}
             onClick={submit}
           >
-            {allScored ? "채점 제출" : `모든 항목에 점수를 매겨주세요 (${Object.keys(draft).length}/${items.length})`}
+            {allScored ? "채점 제출 (Submit)" : `모든 항목에 점수를 매겨주세요 · Score all items (${Object.keys(draft).length}/${items.length})`}
           </button>
         </div>
       </main>
@@ -206,7 +207,7 @@ function JudgeInner() {
 
   const makeSendLink = async () => {
     if (myScores.length === 0) {
-      alert("아직 제출한 채점이 없습니다.");
+      alert("아직 제출한 채점이 없습니다. (No scores submitted yet.)");
       return;
     }
     const hash = await encodeHashPayload("s", { scores: myScores });
@@ -217,18 +218,21 @@ function JudgeInner() {
   return (
     <main className="page">
       <div className="topbar">
-        <Link href="/" className="home-link">← 처음으로</Link>
+        <Link href="/" className="home-link">← 처음으로 (Home)</Link>
         <button
           className="btn ghost"
           style={{ padding: "6px 12px", fontSize: 13 }}
           onClick={() => { sessionStorage.removeItem("judge:self"); setJudgeId(null); }}
         >
-          심사위원 변경
+          심사위원 변경 (Change judge)
         </button>
       </div>
-      <h1 className="contest-title">심사위원 모드</h1>
-      <p className="subtitle">{judge.name} · {scoredSet.size}/{config.participants.length}명 채점 완료</p>
-      <p className="note">참가자는 참가번호로만 표시됩니다. 발표를 보면서 번호를 눌러 채점하세요.</p>
+      <h1 className="contest-title">심사위원 모드 (Judge Mode)</h1>
+      <p className="subtitle">{judge.name} · {scoredSet.size}/{config.participants.length}명 채점 완료 (scored)</p>
+      <p className="note">
+        참가자는 참가번호로만 표시됩니다. 발표를 보면서 번호를 눌러 채점하세요.
+        <br />Participants are shown by number only (anonymous). Tap a number to score during the performance.
+      </p>
 
       <div className="role-grid" style={{ maxWidth: 720 }}>
         {config.participants.map((num) => {
@@ -250,8 +254,8 @@ function JudgeInner() {
               }}
             >
               <h2 style={{ fontSize: 26 }}>{num}번</h2>
-              <p style={{ marginTop: 6, color: done ? "var(--cyan)" : "var(--text-dim)" }}>
-                {done ? "채점 완료 ✓ (수정 가능)" : "미채점"}
+              <p style={{ marginTop: 6, color: done ? "var(--cyan)" : "var(--text-dim)", fontSize: 13 }}>
+                {done ? "채점 완료 ✓ (Done · 수정 가능)" : "미채점 (Not scored)"}
               </p>
             </button>
           );
@@ -261,9 +265,10 @@ function JudgeInner() {
       <div className="card" style={{ width: "100%", maxWidth: 720, textAlign: "center" }}>
         <p style={{ fontSize: 14, lineHeight: 1.7, color: "var(--text-dim)" }}>
           채점을 마쳤으면 결과를 관리자에게 보내주세요.
+          <br />When finished, send your scores to the administrator.
         </p>
         <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "center", flexWrap: "wrap" }}>
-          <button className="btn" onClick={makeSendLink}>📤 채점 결과 보내기</button>
+          <button className="btn" onClick={makeSendLink}>📤 채점 결과 보내기 (Send scores)</button>
           {sendUrl && (
             <button
               className="btn ghost"
@@ -274,13 +279,14 @@ function JudgeInner() {
                 } catch { /* 클립보드 미지원 */ }
               }}
             >
-              {copied ? "복사됨 ✓ — 관리자에게 전송하세요" : "링크 복사"}
+              {copied ? "복사됨 ✓ (Copied — send it)" : "링크 복사 (Copy link)"}
             </button>
           )}
         </div>
         {sendUrl && (
           <p style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 8 }}>
-            복사한 링크를 카톡 등으로 관리자에게 보내면, 관리자가 열었을 때 점수가 집계에 반영됩니다.
+            복사한 링크를 관리자에게 보내면, 관리자가 열었을 때 점수가 집계에 반영됩니다.
+            <br />Send the copied link to the administrator; scores are applied when they open it.
           </p>
         )}
       </div>

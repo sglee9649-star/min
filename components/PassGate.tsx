@@ -28,28 +28,29 @@ export default function PassGate({
   return (
     <main className="page">
       <h1 className="contest-title">{title}</h1>
-      <p className="subtitle">접속코드를 입력하세요</p>
+      <p className="subtitle">접속코드를 입력하세요 (Enter the access code)</p>
       <form
         className="form"
         onSubmit={(e) => {
           e.preventDefault();
           if (tryUnlock(role, code)) setUnlocked(true);
-          else setError("접속코드가 올바르지 않습니다.");
+          else setError("접속코드가 올바르지 않습니다. (Incorrect access code.)");
         }}
       >
         <input
           type="password"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          placeholder="접속코드"
+          placeholder="접속코드 (Access code)"
           autoFocus
         />
         {error && <p className="error">{error}</p>}
-        <button className="btn" type="submit">입장</button>
+        <button className="btn" type="submit">입장 (Enter)</button>
       </form>
       <p className="note">
         ⚠️ 지금은 개발용 임시 코드입니다 (심사위원: judge2026 / 관리자: admin2026).
         실제 대회 전에 Supabase 로그인으로 교체됩니다.
+        <br />(Temporary development codes — will be replaced by real login before the contest.)
       </p>
     </main>
   );

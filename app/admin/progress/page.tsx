@@ -86,10 +86,10 @@ function ProgressInner() {
   return (
     <main className="page">
       <div className="topbar">
-        <Link href="/admin" className="home-link">← 관리자 홈</Link>
-        <button className="btn ghost" style={{ padding: "6px 12px", fontSize: 13 }} onClick={refresh}>새로고침</button>
+        <Link href="/admin" className="home-link">← 관리자 홈 (Admin)</Link>
+        <button className="btn ghost" style={{ padding: "6px 12px", fontSize: 13 }} onClick={refresh}>새로고침 (Refresh)</button>
       </div>
-      <h1 className="contest-title">심사 진행 현황</h1>
+      <h1 className="contest-title">심사 진행 현황 (Progress)</h1>
       <p className="subtitle">{doneCells}/{totalCells} 제출 완료 ({Math.round((doneCells / Math.max(1, totalCells)) * 100)}%)</p>
 
       {importedCount !== null && (
@@ -107,11 +107,11 @@ function ProgressInner() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: "left", padding: "8px 10px", color: "var(--text-dim)", borderBottom: "1px solid var(--border)" }}>참가번호</th>
+              <th style={{ textAlign: "left", padding: "8px 10px", color: "var(--text-dim)", borderBottom: "1px solid var(--border)" }}>참가번호 (No.)</th>
               {config.judges.map((j) => (
                 <th key={j.id} style={{ padding: "8px 10px", color: "var(--text-dim)", borderBottom: "1px solid var(--border)" }}>{j.name}</th>
               ))}
-              <th style={{ padding: "8px 10px", color: "var(--text-dim)", borderBottom: "1px solid var(--border)" }}>AI 평가</th>
+              <th style={{ padding: "8px 10px", color: "var(--text-dim)", borderBottom: "1px solid var(--border)" }}>AI</th>
             </tr>
           </thead>
           <tbody>

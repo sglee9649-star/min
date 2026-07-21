@@ -258,7 +258,7 @@ function GenerateInner() {
                   placeholder="참가번호 (예: 1, 2, 3)"
                   style={{
                     padding: "8px 12px", borderRadius: 8, fontSize: 14, width: 180,
-                    border: "1px solid var(--border)", background: "rgba(8,14,28,0.8)", color: "var(--text)",
+                    border: "1px solid var(--border)", background: "var(--input-bg)", color: "var(--text)",
                   }}
                 />
                 {activeId === p.id ? (
