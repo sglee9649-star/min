@@ -155,6 +155,10 @@ export default function ParticipantPage() {
         durationSec,
         mimeType,
         uploaded: false,
+        // AI 평가(4단계)에 필요한 문제 내용을 녹음에 함께 저장
+        problemPassage: p.passage,
+        problemKeyPoints: p.keyPoints,
+        problemQuestions: p.questions,
         blob,
       });
       setSavedOk(true);

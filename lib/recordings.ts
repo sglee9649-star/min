@@ -3,6 +3,21 @@
 // 서버 업로드는 Supabase 도입 단계에서 추가한다 (uploaded 플래그로 관리).
 import type { TaskType } from "./criteria";
 
+// AI 평가 결과 (4단계). 전사본 기반이라 내용·언어 항목만 채점하며,
+// 점수마다 전사본에서 뽑은 근거가 반드시 붙는다. AI 점수는 참고용.
+export interface AiEvaluation {
+  model: string;
+  createdAt: string;
+  totalScore: number; // 100점 환산 (채점된 항목 평균)
+  scores: {
+    criterionId: string;
+    score: number; // 0~5
+    evidence: string; // 전사본에서 인용한 근거 (영어)
+    comment: string; // 한국어 코멘트
+  }[];
+  overallComment: string; // 한국어 총평 + 개선 조언
+}
+
 export interface RecordingMeta {
   id: string;
   participantNumber: string;
@@ -15,6 +30,13 @@ export interface RecordingMeta {
   durationSec: number;
   mimeType: string;
   uploaded: boolean;
+  // AI 평가에 필요한 문제 내용을 녹음에 함께 보관 (다른 기기에서 평가해도 문제를 찾을 수 있게)
+  problemPassage?: string;
+  problemKeyPoints?: string[];
+  problemQuestions?: { question: string; sampleAnswer: string }[];
+  // 4단계 결과
+  transcript?: string;
+  evaluation?: AiEvaluation;
 }
 
 export interface RecordingEntry extends RecordingMeta {
@@ -57,6 +79,22 @@ export async function listRecordings(): Promise<RecordingEntry[]> {
       resolve(all);
     };
     req.onerror = () => reject(req.error);
+  });
+}
+
+// 전사본·평가 결과 등 일부 필드만 갱신
+export async function updateRecording(id: string, patch: Partial<RecordingMeta>): Promise<void> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    const store = tx.objectStore(STORE);
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const entry = getReq.result as RecordingEntry | undefined;
+      if (entry) store.put({ ...entry, ...patch });
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
   });
 }
 
