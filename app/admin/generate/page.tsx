@@ -6,11 +6,14 @@ import PassGate from "@/components/PassGate";
 import JarvisOrb from "@/components/JarvisOrb";
 import { TASK_TYPE_LABELS, type TaskType } from "@/lib/criteria";
 import { CATEGORIES, GRADE_LEVELS, PROFICIENCY_LEVELS } from "@/lib/levels";
+import QRCode from "qrcode";
 import {
   loadProblems, saveProblem, deleteProblem,
   setActiveProblem, clearActiveProblem, getActiveProblemId,
   type GeneratedProblem,
 } from "@/lib/problems";
+import { buildShareHash } from "@/lib/share";
+import { loadSettings } from "@/lib/settings";
 
 // 2단계: AI 문제 생성 화면. 난이도(학년/레벨) + 카테고리 또는 키워드 → 지문·질문 생성.
 export default function GeneratePage() {
@@ -44,6 +47,17 @@ function GenerateInner() {
   const [bank, setBank] = useState<GeneratedProblem[]>([]);
   const [bankOpen, setBankOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [share, setShare] = useState<{ id: string; url: string; qr: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // QR/링크 출제: 문제+타이머 설정을 URL에 담아 태블릿 등 다른 기기로 전달
+  const shareProblem = async (p: GeneratedProblem) => {
+    const hash = await buildShareHash(p, loadSettings());
+    const url = `${window.location.origin}/participant${hash}`;
+    const qr = await QRCode.toDataURL(url, { errorCorrectionLevel: "L", margin: 1, width: 320 });
+    setShare({ id: p.id, url, qr });
+    setCopied(false);
+  };
 
   const generate = async () => {
     setLoading(true);
@@ -155,11 +169,45 @@ function GenerateInner() {
                 <button
                   className="btn ghost"
                   style={{ padding: "6px 12px", fontSize: 13 }}
+                  onClick={() => shareProblem(p)}
+                >
+                  📱 태블릿 출제 (QR)
+                </button>
+                <button
+                  className="btn ghost"
+                  style={{ padding: "6px 12px", fontSize: 13 }}
                   onClick={() => { deleteProblem(p.id); setBank(loadProblems()); setActiveId(getActiveProblemId()); }}
                 >
                   삭제
                 </button>
               </div>
+              {share?.id === p.id && (
+                <div style={{ marginTop: 14, textAlign: "center" }}>
+                  <p style={{ fontSize: 14, lineHeight: 1.7, marginBottom: 10 }}>
+                    태블릿 <strong>카메라</strong>로 이 QR을 찍으면 바로 이 문제로 응시가 시작됩니다.
+                    <br />(현재 저장된 읽기/말하기 시간 설정도 함께 전달됩니다)
+                  </p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={share.qr} alt="출제 QR 코드" style={{ width: 280, maxWidth: "100%", borderRadius: 12, background: "#fff", padding: 8 }} />
+                  <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                    <button
+                      className="btn ghost"
+                      style={{ padding: "6px 12px", fontSize: 13 }}
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(share.url);
+                          setCopied(true);
+                        } catch { /* 클립보드 미지원 브라우저 */ }
+                      }}
+                    >
+                      {copied ? "복사됨 ✓" : "링크 복사 (카톡 등으로 보내기)"}
+                    </button>
+                    <button className="btn ghost" style={{ padding: "6px 12px", fontSize: 13 }} onClick={() => setShare(null)}>
+                      닫기
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

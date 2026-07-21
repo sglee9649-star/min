@@ -6,7 +6,8 @@ import JarvisOrb from "@/components/JarvisOrb";
 import { TASK_TYPE_LABELS } from "@/lib/criteria";
 import { getActiveProblem, type GeneratedProblem } from "@/lib/problems";
 import { pickMimeType, saveRecording } from "@/lib/recordings";
-import { ContestSettings, DEFAULT_SETTINGS, loadSettings } from "@/lib/settings";
+import { parseShareHash } from "@/lib/share";
+import { ContestSettings, DEFAULT_SETTINGS, loadSettings, saveSettings } from "@/lib/settings";
 
 // 참가자 모드 (3단계): 참가번호 → 대기 → 읽기 타이머 → 자동 녹음 + 말하기 타이머 → 로컬 저장.
 // 녹음은 기기(IndexedDB)에 먼저 저장된다 — 현장 와이파이가 끊겨도 유실되지 않음.
@@ -32,6 +33,20 @@ export default function ParticipantPage() {
 
   useEffect(() => {
     setSettings(loadSettings());
+    // QR/링크 출제: 주소에 문제가 담겨 있으면 그 문제로 바로 진행 (다른 기기에서 출제한 경우)
+    parseShareHash(window.location.hash).then((payload) => {
+      if (!payload) return;
+      setProblem({
+        ...payload.problem,
+        createdAt: "",
+        gradeId: "",
+        passageKo: "",
+        vocabulary: [],
+        keyPoints: [],
+      });
+      saveSettings(payload.settings); // 출제자의 타이머 설정을 이 기기에도 적용
+      setSettings(payload.settings);
+    });
     return () => stopEverything();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -159,7 +174,7 @@ export default function ParticipantPage() {
         <p className="subtitle">참가번호를 입력하세요</p>
         <form
           className="form"
-          onSubmit={(e) => { e.preventDefault(); if (number.trim()) setPhase("waiting"); }}
+          onSubmit={(e) => { e.preventDefault(); if (number.trim()) setPhase(problem ? "ready" : "waiting"); }}
         >
           <input inputMode="numeric" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="예: 7" autoFocus />
           <button className="btn" type="submit">입장</button>
