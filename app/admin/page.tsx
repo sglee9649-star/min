@@ -77,10 +77,10 @@ function AdminInner() {
       </div>
 
       <div className="role-grid">
-        <div className="card">
-          <h2>문제 생성 <span className="badge soon">2단계 예정</span></h2>
+        <Link href="/admin/generate" className="card">
+          <h2>문제 생성 <span className="badge">사용 가능</span></h2>
           <p>난이도(초1~고3 / Lexile·CEFR) + 카테고리 또는 키워드 직접 입력 → AI가 지문·질문 생성.</p>
-        </div>
+        </Link>
         <div className="card">
           <h2>평가기준표 구성 <span className="badge soon">5단계 예정</span></h2>
           <p>전체 평가항목 카탈로그에서 선택 + 비중 설정. AI:심사위원 반영 비율 설정.</p>

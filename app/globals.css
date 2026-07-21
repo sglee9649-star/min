@@ -96,6 +96,19 @@ a.card:hover {
   outline: none;
 }
 .form input:focus { border-color: var(--cyan); }
+.form select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(8, 14, 28, 0.8);
+  color: var(--text);
+  font-size: 16px;
+  outline: none;
+  margin-top: 6px;
+}
+.form select:focus { border-color: var(--cyan); }
+.form label input { margin-top: 6px; }
 
 .btn {
   padding: 12px 22px;
