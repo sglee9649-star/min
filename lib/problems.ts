@@ -37,4 +37,27 @@ export function saveProblem(p: GeneratedProblem) {
 
 export function deleteProblem(id: string) {
   localStorage.setItem(KEY, JSON.stringify(loadProblems().filter((p) => p.id !== id)));
+  if (getActiveProblemId() === id) clearActiveProblem();
+}
+
+// "출제": 참가자 화면에 내보낼 현재 문제. Supabase 도입 전에는 같은 기기(브라우저) 안에서만 공유된다.
+const ACTIVE_KEY = "problems:active";
+
+export function setActiveProblem(id: string) {
+  localStorage.setItem(ACTIVE_KEY, id);
+}
+
+export function clearActiveProblem() {
+  localStorage.removeItem(ACTIVE_KEY);
+}
+
+export function getActiveProblemId(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ACTIVE_KEY);
+}
+
+export function getActiveProblem(): GeneratedProblem | null {
+  const id = getActiveProblemId();
+  if (!id) return null;
+  return loadProblems().find((p) => p.id === id) ?? null;
 }

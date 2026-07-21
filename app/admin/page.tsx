@@ -71,6 +71,15 @@ function AdminInner() {
               onChange={(e) => update({ speakTimeSec: Number(e.target.value) })}
             />
           </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={settings.allowRetry}
+              onChange={(e) => update({ allowRetry: e.target.checked })}
+              style={{ width: "auto" }}
+            />
+            재녹음 허용 (기기 오류 대비 — 재시도는 사유와 함께 기록됩니다)
+          </label>
           <button className="btn" type="submit">저장</button>
           {saved && <p style={{ color: "var(--cyan)", fontSize: 13 }}>저장되었습니다.</p>}
         </form>
@@ -80,6 +89,10 @@ function AdminInner() {
         <Link href="/admin/generate" className="card">
           <h2>문제 생성 <span className="badge">사용 가능</span></h2>
           <p>난이도(초1~고3 / Lexile·CEFR) + 카테고리 또는 키워드 직접 입력 → AI가 지문·질문 생성.</p>
+        </Link>
+        <Link href="/admin/recordings" className="card">
+          <h2>녹음 관리 <span className="badge">사용 가능</span></h2>
+          <p>이 기기에 저장된 녹음 듣기·다운로드·삭제, 재녹음(재시도) 기록 확인.</p>
         </Link>
         <div className="card">
           <h2>평가기준표 구성 <span className="badge soon">5단계 예정</span></h2>

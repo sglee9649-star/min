@@ -6,7 +6,11 @@ import PassGate from "@/components/PassGate";
 import JarvisOrb from "@/components/JarvisOrb";
 import { TASK_TYPE_LABELS, type TaskType } from "@/lib/criteria";
 import { CATEGORIES, GRADE_LEVELS, PROFICIENCY_LEVELS } from "@/lib/levels";
-import { loadProblems, saveProblem, deleteProblem, type GeneratedProblem } from "@/lib/problems";
+import {
+  loadProblems, saveProblem, deleteProblem,
+  setActiveProblem, clearActiveProblem, getActiveProblemId,
+  type GeneratedProblem,
+} from "@/lib/problems";
 
 // 2단계: AI 문제 생성 화면. 난이도(학년/레벨) + 카테고리 또는 키워드 → 지문·질문 생성.
 export default function GeneratePage() {
@@ -39,6 +43,7 @@ function GenerateInner() {
   const [saved, setSaved] = useState(false);
   const [bank, setBank] = useState<GeneratedProblem[]>([]);
   const [bankOpen, setBankOpen] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const generate = async () => {
     setLoading(true);
@@ -84,6 +89,7 @@ function GenerateInner() {
 
   const openBank = () => {
     setBank(loadProblems());
+    setActiveId(getActiveProblemId());
     setBankOpen(!bankOpen);
   };
 
@@ -112,6 +118,12 @@ function GenerateInner() {
         <div className="card" style={{ width: "100%", maxWidth: 860 }}>
           <h2>문제 보관함 ({bank.length}개)</h2>
           {bank.length === 0 && <p style={{ marginTop: 8 }}>저장된 문제가 없습니다. 생성 후 &quot;보관함에 저장&quot;을 누르세요.</p>}
+          {bank.length > 0 && (
+            <p style={{ marginTop: 8, fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7 }}>
+              &quot;출제하기&quot;를 누르면 참가자 화면에 그 문제가 나갑니다.
+              (Supabase 도입 전까지는 같은 브라우저에서 연 참가자 화면에만 적용됩니다)
+            </p>
+          )}
           {bank.map((p) => (
             <div key={p.id} style={{ borderTop: "1px solid var(--border)", padding: "10px 0", marginTop: 10 }}>
               <p>
@@ -122,13 +134,32 @@ function GenerateInner() {
               <p style={{ color: "var(--text-dim)", fontSize: 13, marginTop: 4 }}>
                 {p.passage.slice(0, 100)}…
               </p>
-              <button
-                className="btn ghost"
-                style={{ marginTop: 8, padding: "6px 12px", fontSize: 13 }}
-                onClick={() => { deleteProblem(p.id); setBank(loadProblems()); }}
-              >
-                삭제
-              </button>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                {activeId === p.id ? (
+                  <button
+                    className="btn"
+                    style={{ padding: "6px 12px", fontSize: 13 }}
+                    onClick={() => { clearActiveProblem(); setActiveId(null); }}
+                  >
+                    출제 중 ✓ (누르면 회수)
+                  </button>
+                ) : (
+                  <button
+                    className="btn ghost"
+                    style={{ padding: "6px 12px", fontSize: 13 }}
+                    onClick={() => { setActiveProblem(p.id); setActiveId(p.id); }}
+                  >
+                    출제하기
+                  </button>
+                )}
+                <button
+                  className="btn ghost"
+                  style={{ padding: "6px 12px", fontSize: 13 }}
+                  onClick={() => { deleteProblem(p.id); setBank(loadProblems()); setActiveId(getActiveProblemId()); }}
+                >
+                  삭제
+                </button>
+              </div>
             </div>
           ))}
         </div>

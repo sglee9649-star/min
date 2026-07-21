@@ -198,6 +198,43 @@ a.card:hover {
 }
 @keyframes text-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 
+/* ---------- 타이머 ---------- */
+.timer-bar {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 24px;
+}
+.timer-bar.recording { border-color: rgba(255, 107, 107, 0.6); }
+.timer-label {
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.timer-bar.recording .timer-label { color: var(--danger); }
+.timer-big {
+  font-size: clamp(32px, 6vw, 52px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--cyan);
+}
+.timer-bar.recording .timer-big { color: var(--danger); }
+.rec-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: text-blink 1.2s ease-in-out infinite;
+}
+
 /* ---------- 발표(프로젝션) 화면 ---------- */
 .display-page {
   min-height: 100vh;
