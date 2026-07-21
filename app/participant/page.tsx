@@ -176,28 +176,37 @@ export default function ParticipantPage() {
 
   if (phase === "enter") {
     return (
-      <main className="page">
+      <main className="page" style={{ justifyContent: "center", minHeight: "88vh" }}>
         <div className="topbar"><Link href="/" className="home-link">← 처음으로</Link></div>
+        <p className="hero-eyebrow">{settings.eyebrow}</p>
         <h1 className="contest-title">{settings.contestName}</h1>
-        <p className="subtitle">참가번호를 입력하세요</p>
-        <form
-          className="form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!number.trim()) return;
-            // 우선순위: QR 단일 출제 > 이 번호에 배정된 문제 > 공통 출제 > 대기
-            const assigned = problem ?? getProblemForNumber(number);
-            if (assigned) {
-              setProblem(assigned);
-              setPhase("ready");
-            } else {
-              setPhase("waiting");
-            }
-          }}
-        >
-          <input inputMode="numeric" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="예: 7" autoFocus />
-          <button className="btn" type="submit">입장</button>
-        </form>
+        <div className="orb-console-wrap">
+          <JarvisOrb />
+          <form
+            className="orb-console"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!number.trim()) return;
+              // 우선순위: QR 단일 출제 > 이 번호에 배정된 문제 > 공통 출제 > 대기
+              const assigned = problem ?? getProblemForNumber(number);
+              if (assigned) {
+                setProblem(assigned);
+                setPhase("ready");
+              } else {
+                setPhase("waiting");
+              }
+            }}
+          >
+            <input
+              inputMode="numeric"
+              value={number}
+              onChange={(e) => setNumber(e.target.value)}
+              placeholder="참가번호"
+              autoFocus
+            />
+            <button className="btn" type="submit">입장 →</button>
+          </form>
+        </div>
       </main>
     );
   }

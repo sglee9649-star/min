@@ -6,15 +6,17 @@ import { DEFAULT_SETTINGS, loadSettings } from "@/lib/settings";
 
 // 프로젝션(발표) 화면 — 대회명을 크게 띄운다. 6단계에서 결과 발표 기능이 추가된다.
 export default function DisplayPage() {
-  const [contestName, setContestName] = useState(DEFAULT_SETTINGS.contestName);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
 
   useEffect(() => {
-    setContestName(loadSettings().contestName);
+    setSettings(loadSettings());
   }, []);
 
   return (
     <main className="display-page">
-      <h1 className="contest-title">{contestName}</h1>
+      <p className="hero-eyebrow">{settings.eyebrow}</p>
+      <h1 className="contest-title">{settings.contestName}</h1>
+      <p className="subtitle">{settings.subtitle}</p>
       <JarvisOrb />
     </main>
   );

@@ -6,18 +6,18 @@ import { DEFAULT_SETTINGS, loadSettings } from "@/lib/settings";
 
 // 입장 화면: 참가자 중심. 심사위원/관리자 입구는 하단에 작게 배치한다.
 export default function Home() {
-  const [contestName, setContestName] = useState(DEFAULT_SETTINGS.contestName);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
 
   useEffect(() => {
-    setContestName(loadSettings().contestName);
+    setSettings(loadSettings());
   }, []);
 
   return (
     <main className="page hero">
       <div className="hero-glow" aria-hidden />
-      <p className="hero-eyebrow">AI SPEAKING ASSESSMENT</p>
-      <h1 className="contest-title">{contestName}</h1>
-      <p className="subtitle">English Retelling · Read-Aloud · Interview</p>
+      <p className="hero-eyebrow">{settings.eyebrow}</p>
+      <h1 className="contest-title">{settings.contestName}</h1>
+      <p className="subtitle">{settings.subtitle}</p>
 
       <Link href="/participant" className="cta">
         <span className="cta-icon">🎤</span>

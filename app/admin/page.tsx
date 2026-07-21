@@ -47,10 +47,24 @@ function AdminInner() {
           }}
         >
           <label>
-            대회명 (참가자·발표 화면에 표시됩니다)
+            상단 라벨 (입장 화면 맨 위 작은 문구)
+            <input
+              value={settings.eyebrow}
+              onChange={(e) => update({ eyebrow: e.target.value })}
+            />
+          </label>
+          <label>
+            대회명 (참가자·발표 화면에 크게 표시됩니다)
             <input
               value={settings.contestName}
               onChange={(e) => update({ contestName: e.target.value })}
+            />
+          </label>
+          <label>
+            부제 (대회명 아래 작은 설명 문구)
+            <input
+              value={settings.subtitle}
+              onChange={(e) => update({ subtitle: e.target.value })}
             />
           </label>
           <label>

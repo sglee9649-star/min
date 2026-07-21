@@ -1,6 +1,8 @@
 // 1단계 임시 설정 저장소 (localStorage). 2단계에서 Supabase DB로 교체한다.
 export interface ContestSettings {
   contestName: string;
+  eyebrow: string; // 입장/대기 화면 맨 위의 작은 라벨 문구
+  subtitle: string; // 대회명 아래 부제
   readTimeSec: number; // 지문 읽기(준비) 시간
   speakTimeSec: number; // 말하기 시간
   allowRetry: boolean; // 기기 오류 등으로 재녹음 허용 여부 (재시도는 로그로 기록됨)
@@ -8,6 +10,8 @@ export interface ContestSettings {
 
 export const DEFAULT_SETTINGS: ContestSettings = {
   contestName: "English AI Retelling Contest",
+  eyebrow: "AI SPEAKING ASSESSMENT",
+  subtitle: "English Retelling · Read-Aloud · Interview",
   readTimeSec: 60,
   speakTimeSec: 90,
   allowRetry: true,
