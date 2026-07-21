@@ -6,14 +6,23 @@ import type { GeneratedProblem } from "./problems";
 import type { ContestSettings } from "./settings";
 
 // URL 크기를 줄이기 위해 참가자에게 필요한 필드만 담는다
+export interface SharedProblemSlim {
+  id: string;
+  taskType: TaskType;
+  title: string;
+  passage: string;
+  questions: { question: string; sampleAnswer: string }[];
+}
+
 export interface SharedPayload {
-  problem: {
-    id: string;
-    taskType: TaskType;
-    title: string;
-    passage: string;
-    questions: { question: string; sampleAnswer: string }[];
-  };
+  problem: SharedProblemSlim;
+  settings: ContestSettings;
+}
+
+// 참가번호별 배정 출제 전체를 담는 페이로드 (링크 공유용)
+export interface SharedAssignmentPayload {
+  problems: SharedProblemSlim[];
+  map: Record<string, string>; // 참가번호 → 문제 id
   settings: ContestSettings;
 }
 
@@ -65,6 +74,46 @@ export async function parseShareHash(hash: string): Promise<SharedPayload | null
       : bytes;
     const payload = JSON.parse(new TextDecoder().decode(raw)) as SharedPayload;
     if (!payload?.problem?.passage || !payload?.settings) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+const slim = (p: GeneratedProblem): SharedProblemSlim => ({
+  id: p.id,
+  taskType: p.taskType,
+  title: p.title,
+  passage: p.passage,
+  questions: p.taskType === "qna" ? p.questions : [],
+});
+
+// 배정 출제 전체 링크 (#a=): 태블릿에서 한 번 열면 모든 배정이 그 기기에 저장된다
+export async function buildAssignmentShareHash(
+  problems: GeneratedProblem[],
+  map: Record<string, string>,
+  settings: ContestSettings,
+): Promise<string> {
+  const payload: SharedAssignmentPayload = { problems: problems.map(slim), map, settings };
+  const raw = new TextEncoder().encode(JSON.stringify(payload));
+  try {
+    const deflated = await pipeThrough(raw, new CompressionStream("deflate-raw"));
+    return `#a=c:${b64urlEncode(deflated)}`;
+  } catch {
+    return `#a=u:${b64urlEncode(raw)}`;
+  }
+}
+
+export async function parseAssignmentShareHash(hash: string): Promise<SharedAssignmentPayload | null> {
+  const m = hash.match(/#a=([cu]):(.+)$/);
+  if (!m) return null;
+  try {
+    const bytes = b64urlDecode(m[2]);
+    const raw = m[1] === "c"
+      ? await pipeThrough(bytes, new DecompressionStream("deflate-raw"))
+      : bytes;
+    const payload = JSON.parse(new TextDecoder().decode(raw)) as SharedAssignmentPayload;
+    if (!payload?.problems?.length || !payload?.map || !payload?.settings) return null;
     return payload;
   } catch {
     return null;

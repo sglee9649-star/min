@@ -99,7 +99,7 @@ export async function POST(req: Request) {
     : `Topic category: ${categoryLabel} (${body.category}). Choose a fresh, engaging topic within this category.`;
 
   const levelLine = proficiency
-    ? `Language level: target ${proficiency.label} (Lexile ${proficiency.lexile}, IELTS ${proficiency.ielts}). ${proficiency.promptHint} The student's school grade (${grade.label}) tells you their age and interests; the CEFR level overrides grade for language difficulty.`
+    ? `Language level: target Lexile ${proficiency.lexile} / AR(ATOS) ${proficiency.ar}. ${proficiency.promptHint} The student's school grade (${grade.label}) tells you their age and interests; the Lexile/AR level overrides grade for language difficulty.`
     : `Language level: ${grade.promptHint}`;
 
   const userPrompt = `Create speaking-assessment material for a Korean student.

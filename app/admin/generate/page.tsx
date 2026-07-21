@@ -10,12 +10,15 @@ import QRCode from "qrcode";
 import {
   loadProblems, saveProblem, deleteProblem,
   setActiveProblem, clearActiveProblem, getActiveProblemId,
+  loadAssignmentMap, saveAssignmentMap,
   type GeneratedProblem,
 } from "@/lib/problems";
-import { buildShareHash } from "@/lib/share";
+import { buildShareHash, buildAssignmentShareHash } from "@/lib/share";
 import { loadSettings } from "@/lib/settings";
 
-// 2단계: AI 문제 생성 화면. 난이도(학년/레벨) + 카테고리 또는 키워드 → 지문·질문 생성.
+// 2단계: AI 문제 생성 + 출제 관리.
+// - 한 번에 최대 10개 생성
+// - 보관함에서 문제마다 참가번호를 배정하고 "일괄 출제" (한 문제에 여러 명 가능)
 export default function GeneratePage() {
   return (
     <PassGate role="admin" title="문제 생성">
@@ -40,8 +43,11 @@ function GenerateInner() {
   const [category, setCategory] = useState("animals");
   const [useKeywords, setUseKeywords] = useState(false);
   const [keywords, setKeywords] = useState("");
+  const [count, setCount] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [result, setResult] = useState<GenResult | null>(null);
   const [saved, setSaved] = useState(false);
   const [bank, setBank] = useState<GeneratedProblem[]>([]);
@@ -49,6 +55,102 @@ function GenerateInner() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [share, setShare] = useState<{ id: string; url: string; qr: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  // 참가번호 배정 입력값 (문제 id → "1, 2, 3" 형태)
+  const [assignDrafts, setAssignDrafts] = useState<Record<string, string>>({});
+  const [assignUrl, setAssignUrl] = useState("");
+  const [assignCopied, setAssignCopied] = useState(false);
+
+  const requestBody = () => ({
+    taskType,
+    gradeId,
+    proficiencyId: proficiencyId || undefined,
+    category: useKeywords ? undefined : category,
+    keywords: useKeywords ? keywords : undefined,
+  });
+
+  const generateOne = async (): Promise<GenResult> => {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody()),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "생성에 실패했습니다.");
+    return data.result as GenResult;
+  };
+
+  const toProblem = (r: GenResult): GeneratedProblem => ({
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    taskType,
+    gradeId,
+    proficiencyId: proficiencyId || undefined,
+    category: useKeywords ? undefined : category,
+    keywords: useKeywords ? keywords : undefined,
+    ...r,
+  });
+
+  const generate = async () => {
+    setLoading(true);
+    setError("");
+    setNotice("");
+    setResult(null);
+    setSaved(false);
+    try {
+      if (count === 1) {
+        setProgress({ done: 0, total: 1 });
+        setResult(await generateOne());
+      } else {
+        // 여러 개: 5개씩 동시에 생성하고 전부 보관함에 자동 저장
+        setProgress({ done: 0, total: count });
+        let done = 0;
+        let failed = 0;
+        for (let i = 0; i < count; i += 5) {
+          const n = Math.min(5, count - i);
+          await Promise.all(
+            Array.from({ length: n }, async () => {
+              try {
+                saveProblem(toProblem(await generateOne()));
+              } catch {
+                failed++;
+              } finally {
+                done++;
+                setProgress({ done, total: count });
+              }
+            }),
+          );
+        }
+        setBank(loadProblems());
+        setActiveId(getActiveProblemId());
+        setBankOpen(true);
+        setNotice(`${count - failed}개가 생성되어 보관함에 저장되었습니다.${failed ? ` (${failed}개 실패 — 다시 시도해주세요)` : ""} 아래에서 참가번호를 배정하고 일괄 출제하세요.`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "생성에 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const save = () => {
+    if (!result) return;
+    saveProblem(toProblem(result));
+    setSaved(true);
+  };
+
+  const openBank = () => {
+    const all = loadProblems();
+    setBank(all);
+    setActiveId(getActiveProblemId());
+    // 저장돼 있던 배정을 입력칸에 복원
+    const map = loadAssignmentMap();
+    const drafts: Record<string, string> = {};
+    for (const [num, pid] of Object.entries(map)) {
+      drafts[pid] = drafts[pid] ? `${drafts[pid]}, ${num}` : num;
+    }
+    setAssignDrafts(drafts);
+    setBankOpen(!bankOpen);
+  };
 
   // QR/링크 출제: 문제+타이머 설정을 URL에 담아 태블릿 등 다른 기기로 전달
   const shareProblem = async (p: GeneratedProblem) => {
@@ -59,60 +161,39 @@ function GenerateInner() {
     setCopied(false);
   };
 
-  const generate = async () => {
-    setLoading(true);
-    setError("");
-    setResult(null);
-    setSaved(false);
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          taskType,
-          gradeId,
-          proficiencyId: proficiencyId || undefined,
-          category: useKeywords ? undefined : category,
-          keywords: useKeywords ? keywords : undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "생성에 실패했습니다.");
-      setResult(data.result);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "생성에 실패했습니다.");
-    } finally {
-      setLoading(false);
+  // 참가번호 배정 일괄 출제
+  const publishAssignments = async () => {
+    const map: Record<string, string> = {};
+    for (const p of bank) {
+      const nums = (assignDrafts[p.id] ?? "").split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+      for (const n of nums) {
+        if (map[n]) {
+          alert(`참가번호 ${n}번이 두 문제에 배정되어 있습니다. 하나만 남겨주세요.`);
+          return;
+        }
+        map[n] = p.id;
+      }
     }
-  };
-
-  const save = () => {
-    if (!result) return;
-    saveProblem({
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      taskType,
-      gradeId,
-      proficiencyId: proficiencyId || undefined,
-      category: useKeywords ? undefined : category,
-      keywords: useKeywords ? keywords : undefined,
-      ...result,
-    });
-    setSaved(true);
-  };
-
-  const openBank = () => {
-    setBank(loadProblems());
-    setActiveId(getActiveProblemId());
-    setBankOpen(!bankOpen);
+    const numbers = Object.keys(map);
+    if (numbers.length === 0) {
+      alert("참가번호를 하나 이상 입력해주세요. (예: 1, 2, 3)");
+      return;
+    }
+    saveAssignmentMap(map);
+    const usedProblems = bank.filter((p) => Object.values(map).includes(p.id));
+    const hash = await buildAssignmentShareHash(usedProblems, map, loadSettings());
+    setAssignUrl(`${window.location.origin}/participant${hash}`);
+    setAssignCopied(false);
+    setNotice(`참가번호 ${numbers.length}명 배정 출제 완료! 이 브라우저의 참가자 화면에는 바로 적용됩니다. 태블릿 등 다른 기기는 아래 "배정 출제 링크"를 보내서 한 번 열어주세요.`);
   };
 
   if (loading) {
     return (
       <main className="page" style={{ justifyContent: "center", minHeight: "80vh" }}>
-        <JarvisOrb status="AI가 지문을 만들고 있습니다…" />
+        <JarvisOrb status={progress.total > 1 ? `AI가 문제를 만들고 있습니다… ${progress.done}/${progress.total}` : "AI가 지문을 만들고 있습니다…"} />
         <p className="subtitle">
-          {GRADE_LEVELS.find((g) => g.id === gradeId)?.label} · {TASK_TYPE_LABELS[taskType]} · 30초 정도 걸릴 수 있어요
+          {GRADE_LEVELS.find((g) => g.id === gradeId)?.label} · {TASK_TYPE_LABELS[taskType]}
+          {progress.total > 1 ? ` · ${progress.total}개 생성 중` : " · 30초 정도 걸릴 수 있어요"}
         </p>
       </main>
     );
@@ -127,35 +208,66 @@ function GenerateInner() {
         </button>
       </div>
       <h1 className="contest-title">문제 생성</h1>
+      {notice && <p className="note" style={{ borderColor: "var(--cyan)", color: "var(--text)" }}>{notice}</p>}
 
       {bankOpen && (
         <div className="card" style={{ width: "100%", maxWidth: 860 }}>
           <h2>문제 보관함 ({bank.length}개)</h2>
           {bank.length === 0 && <p style={{ marginTop: 8 }}>저장된 문제가 없습니다. 생성 후 &quot;보관함에 저장&quot;을 누르세요.</p>}
           {bank.length > 0 && (
-            <p style={{ marginTop: 8, fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7 }}>
-              &quot;출제하기&quot;를 누르면 참가자 화면에 그 문제가 나갑니다.
-              (Supabase 도입 전까지는 같은 브라우저에서 연 참가자 화면에만 적용됩니다)
-            </p>
+            <>
+              <p style={{ marginTop: 8, fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7 }}>
+                각 문제의 <strong>참가번호</strong> 칸에 번호를 적고(여러 명이면 쉼표로: 1, 2, 3)
+                아래 <strong>일괄 출제하기</strong>를 누르세요. 참가자가 자기 번호를 입력하면 배정된 문제가 나옵니다.
+              </p>
+              <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                <button className="btn" onClick={publishAssignments}>📢 일괄 출제하기</button>
+              </div>
+              {assignUrl && (
+                <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button
+                    className="btn ghost"
+                    style={{ padding: "6px 12px", fontSize: 13 }}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(assignUrl);
+                        setAssignCopied(true);
+                      } catch { /* 클립보드 미지원 */ }
+                    }}
+                  >
+                    {assignCopied ? "복사됨 ✓" : "🔗 배정 출제 링크 복사 (태블릿으로 보내기)"}
+                  </button>
+                </div>
+              )}
+            </>
           )}
           {bank.map((p) => (
-            <div key={p.id} style={{ borderTop: "1px solid var(--border)", padding: "10px 0", marginTop: 10 }}>
+            <div key={p.id} style={{ borderTop: "1px solid var(--border)", padding: "12px 0", marginTop: 12 }}>
               <p>
                 <strong>{p.title}</strong>{" "}
                 <span className="badge">{TASK_TYPE_LABELS[p.taskType]}</span>{" "}
-                <span className="badge">{GRADE_LEVELS.find((g) => g.id === p.gradeId)?.label}</span>
+                <span className="badge">{GRADE_LEVELS.find((g) => g.id === p.gradeId)?.label ?? "외부"}</span>
               </p>
               <p style={{ color: "var(--text-dim)", fontSize: 13, marginTop: 4 }}>
                 {p.passage.slice(0, 100)}…
               </p>
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <input
+                  value={assignDrafts[p.id] ?? ""}
+                  onChange={(e) => setAssignDrafts((d) => ({ ...d, [p.id]: e.target.value }))}
+                  placeholder="참가번호 (예: 1, 2, 3)"
+                  style={{
+                    padding: "8px 12px", borderRadius: 8, fontSize: 14, width: 180,
+                    border: "1px solid var(--border)", background: "rgba(8,14,28,0.8)", color: "var(--text)",
+                  }}
+                />
                 {activeId === p.id ? (
                   <button
                     className="btn"
                     style={{ padding: "6px 12px", fontSize: 13 }}
                     onClick={() => { clearActiveProblem(); setActiveId(null); }}
                   >
-                    출제 중 ✓ (누르면 회수)
+                    공통 출제 중 ✓ (회수)
                   </button>
                 ) : (
                   <button
@@ -163,7 +275,7 @@ function GenerateInner() {
                     style={{ padding: "6px 12px", fontSize: 13 }}
                     onClick={() => { setActiveProblem(p.id); setActiveId(p.id); }}
                   >
-                    출제하기
+                    공통 출제
                   </button>
                 )}
                 <button
@@ -171,7 +283,7 @@ function GenerateInner() {
                   style={{ padding: "6px 12px", fontSize: 13 }}
                   onClick={() => shareProblem(p)}
                 >
-                  📱 태블릿 출제 (QR)
+                  📱 QR
                 </button>
                 <button
                   className="btn ghost"
@@ -185,7 +297,6 @@ function GenerateInner() {
                 <div style={{ marginTop: 14, textAlign: "center" }}>
                   <p style={{ fontSize: 14, lineHeight: 1.7, marginBottom: 10 }}>
                     태블릿 <strong>카메라</strong>로 이 QR을 찍으면 바로 이 문제로 응시가 시작됩니다.
-                    <br />(현재 저장된 읽기/말하기 시간 설정도 함께 전달됩니다)
                   </p>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={share.qr} alt="출제 QR 코드" style={{ width: 280, maxWidth: "100%", borderRadius: 12, background: "#fff", padding: 8 }} />
@@ -197,10 +308,10 @@ function GenerateInner() {
                         try {
                           await navigator.clipboard.writeText(share.url);
                           setCopied(true);
-                        } catch { /* 클립보드 미지원 브라우저 */ }
+                        } catch { /* 클립보드 미지원 */ }
                       }}
                     >
-                      {copied ? "복사됨 ✓" : "링크 복사 (카톡 등으로 보내기)"}
+                      {copied ? "복사됨 ✓" : "링크 복사"}
                     </button>
                     <button className="btn ghost" style={{ padding: "6px 12px", fontSize: 13 }} onClick={() => setShare(null)}>
                       닫기
@@ -241,12 +352,12 @@ function GenerateInner() {
           </label>
 
           <label>
-            실력 레벨 (선택 — 학년과 다른 수준으로 만들고 싶을 때)
+            실력 레벨 (선택 — Lexile·AR 지수 기준)
             <select value={proficiencyId} onChange={(e) => setProficiencyId(e.target.value)}>
               <option value="">학년 기준 자동</option>
               {PROFICIENCY_LEVELS.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.label} (Lexile {p.lexile} · IELTS {p.ielts})
+                  {p.label} — Lexile {p.lexile} · AR {p.ar}
                 </option>
               ))}
             </select>
@@ -282,8 +393,17 @@ function GenerateInner() {
             </label>
           )}
 
+          <label>
+            생성 개수 (여러 개면 서로 다른 문제가 만들어져 보관함에 자동 저장됩니다)
+            <select value={count} onChange={(e) => setCount(Number(e.target.value))}>
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>{n}개</option>
+              ))}
+            </select>
+          </label>
+
           <button className="btn" type="button" onClick={generate}>
-            ✨ 생성하기
+            ✨ {count > 1 ? `${count}개 생성하기` : "생성하기"}
           </button>
           {error && <p className="error">{error}</p>}
         </div>

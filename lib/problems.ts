@@ -61,3 +61,46 @@ export function getActiveProblem(): GeneratedProblem | null {
   if (!id) return null;
   return loadProblems().find((p) => p.id === id) ?? null;
 }
+
+// ---------- 참가번호별 배정 출제 ----------
+// 문제마다 참가번호를 배정해 한 번에 출제한다. 한 문제에 여러 명 배정 가능.
+// 저장 형태: { "7": "problemId-abc", "8": "problemId-abc", "9": "problemId-def" }
+const ASSIGN_KEY = "problems:assignmentMap";
+
+export function loadAssignmentMap(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(ASSIGN_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function saveAssignmentMap(map: Record<string, string>) {
+  localStorage.setItem(ASSIGN_KEY, JSON.stringify(map));
+}
+
+export function clearAssignmentMap() {
+  localStorage.removeItem(ASSIGN_KEY);
+}
+
+// 참가번호로 배정된 문제 찾기. 배정이 없으면 공통 출제(active) 문제로 대체.
+export function getProblemForNumber(participantNumber: string): GeneratedProblem | null {
+  const map = loadAssignmentMap();
+  const pid = map[participantNumber.trim()];
+  if (pid) {
+    const p = loadProblems().find((x) => x.id === pid);
+    if (p) return p;
+  }
+  return getActiveProblem();
+}
+
+// QR/링크로 받은 출제 세트를 이 기기에 저장 (태블릿에서 링크를 열면 호출됨)
+export function importAssignments(problems: GeneratedProblem[], map: Record<string, string>) {
+  const bank = loadProblems();
+  for (const p of problems) {
+    if (!bank.some((x) => x.id === p.id)) bank.push(p);
+  }
+  localStorage.setItem(KEY, JSON.stringify(bank));
+  saveAssignmentMap(map);
+}

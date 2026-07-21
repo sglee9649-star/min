@@ -25,20 +25,21 @@ export const GRADE_LEVELS: GradeLevel[] = [
 
 export interface ProficiencyLevel {
   id: string;
-  label: string; // CEFR
+  label: string;
   lexile: string;
-  ielts: string;
+  ar: string; // AR(ATOS) 지수 — 미국 학년 기준 독서 레벨
   promptHint: string;
 }
 
-// 선택 항목: 학년과 별개로 실력 레벨을 지정하고 싶을 때 사용 (예: 초5인데 B1 수준)
+// 선택 항목: 학년과 별개로 실력 레벨을 지정하고 싶을 때 사용 (예: 초5인데 레벨 4 수준)
+// Lexile 지수와 AR(ATOS) 지수 기준.
 export const PROFICIENCY_LEVELS: ProficiencyLevel[] = [
-  { id: "preA1", label: "Pre-A1", lexile: "BR~200L", ielts: "-", promptHint: "Absolute beginner. Words and formulaic phrases only." },
-  { id: "a1", label: "A1", lexile: "200~400L", ielts: "~2.5", promptHint: "Beginner. Simple sentences about familiar things." },
-  { id: "a2", label: "A2", lexile: "400~600L", ielts: "3.0~3.5", promptHint: "Elementary. Everyday topics, simple connected text." },
-  { id: "b1", label: "B1", lexile: "600~850L", ielts: "4.0~5.0", promptHint: "Intermediate. Main points of clear standard input." },
-  { id: "b2", label: "B2", lexile: "850~1050L", ielts: "5.5~6.5", promptHint: "Upper-intermediate. Complex text, abstract topics." },
-  { id: "c1", label: "C1", lexile: "1050L+", ielts: "7.0+", promptHint: "Advanced. Demanding, longer texts with implicit meaning." },
+  { id: "lv1", label: "레벨 1 (기초)", lexile: "BR~200L", ar: "1.0~1.9", promptHint: "Beginning reader (Lexile BR-200L, ATOS 1.0-1.9). Very simple sentences, high-frequency sight words, heavy repetition." },
+  { id: "lv2", label: "레벨 2 (초급)", lexile: "200~400L", ar: "2.0~2.9", promptHint: "Early reader (Lexile 200-400L, ATOS 2.0-2.9). Simple sentences about familiar things, basic past tense." },
+  { id: "lv3", label: "레벨 3 (초중급)", lexile: "400~600L", ar: "3.0~3.9", promptHint: "Developing reader (Lexile 400-600L, ATOS 3.0-3.9). Connected paragraphs, everyday topics, basic connectors." },
+  { id: "lv4", label: "레벨 4 (중급)", lexile: "600~800L", ar: "4.0~4.9", promptHint: "Intermediate reader (Lexile 600-800L, ATOS 4.0-4.9). Clear structure, some new vocabulary with context clues." },
+  { id: "lv5", label: "레벨 5 (중상급)", lexile: "800~1000L", ar: "5.0~5.9", promptHint: "Advancing reader (Lexile 800-1000L, ATOS 5.0-5.9). Longer passages, varied sentence patterns, mild abstraction." },
+  { id: "lv6", label: "레벨 6 (상급)", lexile: "1000L+", ar: "6.0+", promptHint: "Advanced reader (Lexile 1000L+, ATOS 6.0+). Academic or literary register, complex sentences, nuanced vocabulary." },
 ];
 
 export const CATEGORIES: { id: string; label: string }[] = [

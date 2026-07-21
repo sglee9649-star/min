@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import JarvisOrb from "@/components/JarvisOrb";
 import { TASK_TYPE_LABELS } from "@/lib/criteria";
-import { getActiveProblem, type GeneratedProblem } from "@/lib/problems";
+import { getProblemForNumber, importAssignments, type GeneratedProblem } from "@/lib/problems";
 import { pickMimeType, saveRecording } from "@/lib/recordings";
-import { parseShareHash } from "@/lib/share";
+import { parseAssignmentShareHash, parseShareHash, type SharedProblemSlim } from "@/lib/share";
 import { ContestSettings, DEFAULT_SETTINGS, loadSettings, saveSettings } from "@/lib/settings";
 
 // 참가자 모드 (3단계): 참가번호 → 대기 → 읽기 타이머 → 자동 녹음 + 말하기 타이머 → 로컬 저장.
@@ -33,29 +33,37 @@ export default function ParticipantPage() {
 
   useEffect(() => {
     setSettings(loadSettings());
-    // QR/링크 출제: 주소에 문제가 담겨 있으면 그 문제로 바로 진행 (다른 기기에서 출제한 경우)
+    const expand = (slim: SharedProblemSlim): GeneratedProblem => ({
+      ...slim,
+      createdAt: "",
+      gradeId: "",
+      passageKo: "",
+      vocabulary: [],
+      keyPoints: [],
+    });
+    // QR/링크 출제 (단일 문제): 주소에 문제가 담겨 있으면 그 문제로 바로 진행
     parseShareHash(window.location.hash).then((payload) => {
       if (!payload) return;
-      setProblem({
-        ...payload.problem,
-        createdAt: "",
-        gradeId: "",
-        passageKo: "",
-        vocabulary: [],
-        keyPoints: [],
-      });
+      setProblem(expand(payload.problem));
       saveSettings(payload.settings); // 출제자의 타이머 설정을 이 기기에도 적용
+      setSettings(payload.settings);
+    });
+    // 배정 출제 링크 (참가번호별): 배정 세트를 이 기기에 저장 → 번호 입력 시 자기 문제로 연결
+    parseAssignmentShareHash(window.location.hash).then((payload) => {
+      if (!payload) return;
+      importAssignments(payload.problems.map(expand), payload.map);
+      saveSettings(payload.settings);
       setSettings(payload.settings);
     });
     return () => stopEverything();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 대기 화면: 관리자가 문제를 출제할 때까지 3초마다 확인
+  // 대기 화면: 이 참가번호에 배정된 문제(또는 공통 출제 문제)가 생길 때까지 3초마다 확인
   useEffect(() => {
     if (phase !== "waiting") return;
     const check = () => {
-      const p = getActiveProblem();
+      const p = getProblemForNumber(number);
       if (p) {
         setProblem(p);
         setPhase("ready");
@@ -64,7 +72,7 @@ export default function ParticipantPage() {
     check();
     const iv = setInterval(check, 3000);
     return () => clearInterval(iv);
-  }, [phase]);
+  }, [phase, number]);
 
   const stopEverything = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -174,7 +182,18 @@ export default function ParticipantPage() {
         <p className="subtitle">참가번호를 입력하세요</p>
         <form
           className="form"
-          onSubmit={(e) => { e.preventDefault(); if (number.trim()) setPhase(problem ? "ready" : "waiting"); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!number.trim()) return;
+            // 우선순위: QR 단일 출제 > 이 번호에 배정된 문제 > 공통 출제 > 대기
+            const assigned = problem ?? getProblemForNumber(number);
+            if (assigned) {
+              setProblem(assigned);
+              setPhase("ready");
+            } else {
+              setPhase("waiting");
+            }
+          }}
         >
           <input inputMode="numeric" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="예: 7" autoFocus />
           <button className="btn" type="submit">입장</button>
