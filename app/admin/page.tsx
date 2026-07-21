@@ -108,14 +108,14 @@ function AdminInner() {
           <h2>녹음 관리 <span className="badge">사용 가능</span></h2>
           <p>이 기기에 저장된 녹음 듣기·다운로드·삭제, 재녹음(재시도) 기록 확인.</p>
         </Link>
-        <div className="card">
-          <h2>평가기준표 구성 <span className="badge soon">5단계 예정</span></h2>
-          <p>전체 평가항목 카탈로그에서 선택 + 비중 설정. AI:심사위원 반영 비율 설정.</p>
-        </div>
-        <div className="card">
-          <h2>심사 진행 현황 <span className="badge soon">5단계 예정</span></h2>
-          <p>심사위원별·참가자별 채점 진행률. 미채점 알림.</p>
-        </div>
+        <Link href="/admin/judging" className="card">
+          <h2>심사 설정 <span className="badge">사용 가능</span></h2>
+          <p>평가기준표(항목 선택 + 비중), AI 반영 비율, 심사위원·참가자 명단, 심사 설정 링크 공유.</p>
+        </Link>
+        <Link href="/admin/progress" className="card">
+          <h2>심사 진행 현황 <span className="badge">사용 가능</span></h2>
+          <p>심사위원별·참가자별 채점 진행률. 심사위원이 보낸 채점 결과 반영.</p>
+        </Link>
         <div className="card">
           <h2>결과 집계·공개 <span className="badge soon">6단계 예정</span></h2>
           <p>편차 보정, 동점 처리, 점수 비공개/공개 전환, 결과 발표 화면 제어.</p>

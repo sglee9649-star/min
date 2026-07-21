@@ -43,6 +43,34 @@ async function pipeThrough(bytes: Uint8Array, stream: CompressionStream | Decomp
   return new Uint8Array(await new Response(compressed).arrayBuffer());
 }
 
+// ---------- 공용 인코딩 ----------
+// 어떤 데이터든 "#<접두어>=c:..." 형태의 URL 해시로 압축해 담는다.
+// 출제(p/a), 심사 설정(j), 채점 결과(s) 공유가 모두 이 방식을 쓴다.
+export async function encodeHashPayload(prefix: string, obj: unknown): Promise<string> {
+  const raw = new TextEncoder().encode(JSON.stringify(obj));
+  try {
+    const deflated = await pipeThrough(raw, new CompressionStream("deflate-raw"));
+    return `#${prefix}=c:${b64urlEncode(deflated)}`;
+  } catch {
+    // 구형 브라우저: 압축 없이 전달
+    return `#${prefix}=u:${b64urlEncode(raw)}`;
+  }
+}
+
+export async function parseHashPayload<T>(prefix: string, hash: string): Promise<T | null> {
+  const m = hash.match(new RegExp(`#${prefix}=([cu]):(.+)$`));
+  if (!m) return null;
+  try {
+    const bytes = b64urlDecode(m[2]);
+    const raw = m[1] === "c"
+      ? await pipeThrough(bytes, new DecompressionStream("deflate-raw"))
+      : bytes;
+    return JSON.parse(new TextDecoder().decode(raw)) as T;
+  } catch {
+    return null;
+  }
+}
+
 export async function buildShareHash(problem: GeneratedProblem, settings: ContestSettings): Promise<string> {
   const payload: SharedPayload = {
     problem: {
@@ -54,30 +82,13 @@ export async function buildShareHash(problem: GeneratedProblem, settings: Contes
     },
     settings,
   };
-  const raw = new TextEncoder().encode(JSON.stringify(payload));
-  try {
-    const deflated = await pipeThrough(raw, new CompressionStream("deflate-raw"));
-    return `#p=c:${b64urlEncode(deflated)}`;
-  } catch {
-    // 구형 브라우저: 압축 없이 전달 (QR이 조금 촘촘해질 뿐 동작은 동일)
-    return `#p=u:${b64urlEncode(raw)}`;
-  }
+  return encodeHashPayload("p", payload);
 }
 
 export async function parseShareHash(hash: string): Promise<SharedPayload | null> {
-  const m = hash.match(/#p=([cu]):(.+)$/);
-  if (!m) return null;
-  try {
-    const bytes = b64urlDecode(m[2]);
-    const raw = m[1] === "c"
-      ? await pipeThrough(bytes, new DecompressionStream("deflate-raw"))
-      : bytes;
-    const payload = JSON.parse(new TextDecoder().decode(raw)) as SharedPayload;
-    if (!payload?.problem?.passage || !payload?.settings) return null;
-    return payload;
-  } catch {
-    return null;
-  }
+  const payload = await parseHashPayload<SharedPayload>("p", hash);
+  if (!payload?.problem?.passage || !payload?.settings) return null;
+  return payload;
 }
 
 const slim = (p: GeneratedProblem): SharedProblemSlim => ({
@@ -95,27 +106,11 @@ export async function buildAssignmentShareHash(
   settings: ContestSettings,
 ): Promise<string> {
   const payload: SharedAssignmentPayload = { problems: problems.map(slim), map, settings };
-  const raw = new TextEncoder().encode(JSON.stringify(payload));
-  try {
-    const deflated = await pipeThrough(raw, new CompressionStream("deflate-raw"));
-    return `#a=c:${b64urlEncode(deflated)}`;
-  } catch {
-    return `#a=u:${b64urlEncode(raw)}`;
-  }
+  return encodeHashPayload("a", payload);
 }
 
 export async function parseAssignmentShareHash(hash: string): Promise<SharedAssignmentPayload | null> {
-  const m = hash.match(/#a=([cu]):(.+)$/);
-  if (!m) return null;
-  try {
-    const bytes = b64urlDecode(m[2]);
-    const raw = m[1] === "c"
-      ? await pipeThrough(bytes, new DecompressionStream("deflate-raw"))
-      : bytes;
-    const payload = JSON.parse(new TextDecoder().decode(raw)) as SharedAssignmentPayload;
-    if (!payload?.problems?.length || !payload?.map || !payload?.settings) return null;
-    return payload;
-  } catch {
-    return null;
-  }
+  const payload = await parseHashPayload<SharedAssignmentPayload>("a", hash);
+  if (!payload?.problems?.length || !payload?.map || !payload?.settings) return null;
+  return payload;
 }
